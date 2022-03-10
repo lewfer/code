@@ -1,0 +1,158 @@
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v4.js"></script>
+
+<!-- specific plugin -->
+<!-- !! -->
+<script src="https://d3js.org/d3-hexbin.v0.2.min.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="lollipop"></div><!-- !! -->
+<div id="hexbin"></div><!-- !! -->
+
+
+<script>
+
+// set the dimensions and margins of the graph
+var margin = {top: 10, right: 30, bottom: 40, left: 100},
+    width = 460 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+var svgl = d3.select("#lollipop")<!-- !! -->
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
+
+// Parse the Data
+d3.csv("gbp_kickstarter_2015_summary.csv", function(data) {
+
+// sort data
+data.sort(function(b, a) {
+  return a.Value - b.Value;
+});
+
+// Add X axis
+var x = d3.scaleLinear()
+  .domain([0, 320000000]) //!!
+  .range([ 0, width]);
+svgl.append("g")
+  .attr("transform", "translate(0," + height + ")")
+  .call(d3.axisBottom(x))
+  .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-45)")
+    .style("text-anchor", "end");
+
+// Y axis
+var y = d3.scaleBand()
+  .range([ 0, height ])
+  .domain(data.map(function(d) { return d.main_category; })) //!!
+  .padding(1);
+  svgl.append("g")
+  .call(d3.axisLeft(y))
+
+// Lines
+svgl.selectAll("myline")
+  .data(data)
+  .enter()
+  .append("line")
+    .attr("x1", function(d) { return x(d.goal); }) //!!
+    .attr("x2", x(0))
+    .attr("y1", function(d) { return y(d.main_category); }) //!!
+    .attr("y2", function(d) { return y(d.main_category); }) //!!
+    .attr("stroke", "grey")
+
+// Circles
+svgl.selectAll("mycircle")
+  .data(data)
+  .enter()
+  .append("circle")
+    .attr("cx", function(d) { return x(d.goal); }) //!!
+    .attr("cy", function(d) { return y(d.main_category); }) //!!
+    .attr("r", "7")
+    .style("fill", "#69b3a2")
+    .attr("stroke", "black")
+})
+
+</script>
+
+<script>
+
+  // set the dimensions and margins of the graph
+  var margin = {top: 10, right: 30, bottom: 30, left: 40},
+      width = 460 - margin.left - margin.right,
+      height = 400 - margin.top - margin.bottom;
+  
+  // append the svg object to the body of the page
+  var svgh = d3.select("#hexbin")<!-- !! -->
+    .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+      .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+  
+  // read data
+  d3.csv("gbp_kickstarter_2015_detail.csv", function(data) { //!!
+  
+    console.log(data)
+    data = data.filter(function(d){return d.category == 'Poetry'}) //!!
+  
+    // Add X axis
+    var x = d3.scaleLinear()
+      .domain([0, 100]) //!!
+      .range([ 0, width ]);
+    svgh.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
+  
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .domain([0, 1000]) //!!
+      .range([ height, 0 ]);
+    svgh.append("g")
+      .call(d3.axisLeft(y));
+  
+    // Reformat the data: d3.hexbin() needs a specific format
+    var inputForHexbinFun = []
+    data.forEach(function(d) {
+      inputForHexbinFun.push( [x(d.backers), y(d.pledged)] )  // Note that we had the transform value of X and Y !   //!!
+    })
+  
+    console.log(inputForHexbinFun)
+  
+    // Prepare a color palette
+    var color = d3.scaleLinear()
+        .domain([0, 5]) // Number of points in the bin?   //!!
+        .range(["transparent",  "#69b3a2"])
+  
+    // Compute the hexbin data
+    var hexbin = d3.hexbin()
+      .radius(9) // size of the bin in px
+      .extent([ [0, 0], [width, height] ])
+  
+    // Plot the hexbins
+    svgh.append("clipPath")
+        .attr("id", "clip")
+      .append("rect")
+        .attr("width", width)
+        .attr("height", height)
+  
+    svgh.append("g")
+      .attr("clip-path", "url(#clip)")
+      .selectAll("path")
+      .data( hexbin(inputForHexbinFun) )
+      .enter().append("path")
+        .attr("d", hexbin.hexagon())
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+        .attr("fill", function(d) { return color(d.length); })
+        .attr("stroke", "black")
+        .attr("stroke-width", "0.1")
+  })
+  </script>
